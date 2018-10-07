@@ -1,13 +1,15 @@
 import pandas as pd
+import os
+import fileinput
 
 filePathTest = '/shared/projects/regan/Chess/CSE712/MOVES/AA1025Kom10moves.txt'
 
 file_path_local = '/home/jacob/ChessIndependentStudy/MOVES/AA1025Kom10moves.txt'
 
+local_directory_test = '/home/jacob/ChessIndependentStudy/MOVES'
 # Looking up the points to convert them
 blackPointsDictionary = {'p': 1, 'r': 5, 'n': 3, 'b': 3, 'q': 9}
 whitePointsDictionary = {'P': 1, 'R': 5, 'N': 3, 'B': 3, 'Q': 9}
-
 
 columns_list = ["FEN-Position", "#times", "Result", "WhiteR", "BlackR", "E", "EMove", "EMV", "MovePlayed",
                 "MovePlayedValue", "ValueDifference"]
@@ -22,7 +24,7 @@ def parse_fen(row):
     #    positions_to_calculate = str(row).split('\n')
     print(str(row))
     if '#' in str(row):
-        Game(row)
+        return {'new games'}
     for c in row:
         if str(c) in blackPointsDictionary.keys():
             black_points += blackPointsDictionary.get(c)
@@ -61,26 +63,13 @@ def ten_point_lead_and_lost(row):
         return
 
 
-def load_score_board():
-    df['ScoreBoard'] = df['FEN-Position'].apply(parse_fen)
-
-
-def load_come_back_marker():
-    df['ComeBackMarker'] = df.apply(ten_point_lead_and_lost, axis=1)
-
-
 def write_file(name):
     df.to_csv(name + 'DataFrame')
-    write_file()
 
 
-print(df['ScoreBoard'])
+def load_multiple_files():
+    file_list_names = os.listdir(local_directory_test)
+    return pd.concat(map(lambda f: pd.read_csv(f, names = columns_list, )))
 
-
-class Game(object):
-
-    def __init__(self, file_names):
-        self.file_names = file_names
-
-
-    def load_files(self):
+df = load_multiple_files()
+print(df.to_string)
