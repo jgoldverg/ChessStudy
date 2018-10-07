@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 import fileinput
-
+import numpy as np
 filePathTest = '/shared/projects/regan/Chess/CSE712/MOVES/AA1025Kom10moves.txt'
 
 file_path_local = '/home/jacob/ChessIndependentStudy/MOVES/AA1025Kom10moves.txt'
@@ -69,7 +69,15 @@ def write_file(name):
 
 def load_multiple_files():
     file_list_names = os.listdir(local_directory_test)
-    return pd.concat(map(lambda f: pd.read_csv(f, names = columns_list, )))
+
+    np_array = []
+    for file_ in file_list_names:
+        df = pd.read_csv(local_directory_test+'/'+file_, names = columns_list)
+        np_array.append(df.as_matrix())
+
+    combo_np = np.vstack(np_array)
+    return pd.DataFrame(combo_np)
+
 
 df = load_multiple_files()
-print(df.to_string)
+write_file('full_')
