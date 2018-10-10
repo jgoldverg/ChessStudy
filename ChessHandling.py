@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import fileinput
 import numpy as np
+
 filePathTest = '/shared/projects/regan/Chess/CSE712/MOVES/AA1025Kom10moves.txt'
 
 file_path_local = '/home/jacob/ChessIndependentStudy/MOVES/AA1025Kom10moves.txt'
@@ -32,7 +33,7 @@ def parse_fen(row):
             white_points += whitePointsDictionary.get(c)
         else:
             continue
-    return {white_points, black_points}
+    return white_points - black_points
 
 
 # white win is a 1 black win is a -1 and a draw is 1/2 or (.5)
@@ -42,39 +43,39 @@ result_options = {'1/2': .5, '0-1': -1, '1-0': 1}
 
 
 def parse_result(row):
-    temp = row
-    if str(temp) in result_options.keys():
-        return result_options.get(temp)
+    print(row)
+    if row in result_options:
+        return result_options.get(row)
     else:
         return None
 
 
 # the method using parseResult and parseFen to see if there was a comeback so to speak.
 def ten_point_lead_and_lost(row):
-    points = parse_fen(row)
-    temp = parse_result(row)
-    if temp is None:
-        return
-    if (points[0] - points[1]) > 900 & int(temp) == -1:
-        return "Turn-around"
-    elif points[0] - points[1] < -900 & int(temp) == 1:
-        return "Turn-around"
+    if row['Score'] > 900.0 and row['NoTie'] == -1.0:
+        return 'black flip'
+    elif row['Score'] < -900.0 and row['NoTie'] == 1.0:
+        return 'white flip'
     else:
-        return
-
+        return None
 
 def write_file(name):
     df.to_csv(name + 'DataFrame')
 
 
-def load_multiple_files():
-    file_list_names = os.listdir(local_directory_test)
+def load_multiple_files(path):
+    if path is None:
+        file_list_names = os.listdir(local_directory_test)
+    else:
+        file_list_names = os.listdir(path)
 
     np_array = []
     for file_ in file_list_names:
-        df = pd.read_csv(local_directory_test+'/'+file_, names = columns_list)
-        np_array.append(df.as_matrix())
+        data_frame = pd.read_csv(local_directory_test + '/' + file_, names=columns_list)
+        np_array.append(data_frame.as_matrix())
 
     combo_np = np.vstack(np_array)
     return pd.DataFrame(combo_np)
 
+
+df['Points'] = df['FEN-Position'].apply(parse_fen)

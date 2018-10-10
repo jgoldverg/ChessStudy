@@ -3,9 +3,6 @@ class Parser(object):
     whitePointsDictionary = {'P': 1, 'R': 5, 'N': 3, 'B': 3, 'Q': 9}
     result_options = {'1/2': .5, '0-1': -1, '1-0': -1}
 
-    def __init__(self, row):
-        self.row = row
-
     def parse_fen(self, row):
         fen_str_no_space = str(row).split(' ')[0]
         white_points = 0
@@ -28,5 +25,3 @@ class Parser(object):
             return self.result_options.get(temp)
         else:
             return None
-
-
