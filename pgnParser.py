@@ -14,52 +14,57 @@ class PGN_2_FEN(object):
     def extract_data(self):
         game_list = []
 
-        line = open(self.file).readline()
-        while line:
-            if line.startswith('[Event'):
-                game = Game.Game(line)
-                game_list.append(game)
-
+        with open(self.file) as f:
+            for line in f:
+                print(line)
                 if len(line) == 0:
                     continue
+                if line.startswith('[Event'):
+                    game_list.append(Game.Game(line))
 
-            if line.startswith(('[Site')):
-                game_list.__getitem__(-1).site = line
+                elif line.startswith('[Site'):
+                    game_list.__getitem__(-1).site = line
 
-            if line.startswith(('[Date')):
-                game_list.__getitem__(-1).date = line
+                elif line.startswith('[Date'):
+                    game_list.__getitem__(-1).date = line
 
-            if line.startswith(('[Round')):
-                game_list.__getitem__(-1).round = line
+                elif line.startswith('[Round'):
+                    game_list.__getitem__(-1).round = line
 
-            if line.startswith(('[Board')):
-                game_list.__getitem__(-1).board = line
+                elif line.startswith('[Board'):
+                    game_list.__getitem__(-1).board = line
 
-            if line.startswith(('[WhiteElo')):
-                game_list.__getitem__(-1).whiteElo = line
+                elif line.startswith('[WhiteElo'):
+                    game_list.__getitem__(-1).whiteElo = line
 
-            if line.startswith(('[BlackElo')):
-                game_list.__getitem__(-1).blackElo = line
+                elif line.startswith('[BlackElo'):
+                    game_list.__getitem__(-1).blackElo = line
 
-            if line.startswith(('[White')):
-                game_list.__getitem__(-1).whiteName = line
+                elif line.startswith('[White'):
+                    game_list.__getitem__(-1).whiteName = line
 
-            if line.startswith(('[Black')):
-                game_list.__getitem__(-1).blackName = line
+                elif line.startswith('[Black'):
+                    game_list.__getitem__(-1).blackName = line
 
-            if line.startswith(('[Result')):
-                game_list.__getitem__(-1).result = line
+                elif line.startswith('[Result'):
+                    game_list.__getitem__(-1).result = line
 
-            if line.startswith(('[WhiteFideId')):
-                game_list.__getitem__(-1).whiteFid = line
+                elif line.startswith('[WhiteFideId'):
+                    game_list.__getitem__(-1).whiteFid = line
 
-            if line.startswith(('[BlackFideId')):
-                game_list.__getitem__(-1).blackFid = line
+                elif line.startswith('[BlackFideId'):
+                    game_list.__getitem__(-1).blackFid = line
 
-            if line.startswith(('[Live')):
-                game_list.__getitem__(-1).site = line
+                elif line.startswith('[Live'):
+                    game_list.__getitem__(-1).site = line
 
-            if line.startswith(('[ECO')):
-                game_list.__getitem__(-1).eco = line
+                elif line.startswith('[ECO'):
+                    game_list.__getitem__(-1).eco = line
+
+                elif list(line)[0].isdigit() or str(line).startswith('{'):
+                    game_list.__getitem__(-1).moves.append(line)
 
         return game_list
+
+    def translate_clock(self):
+        return ''
