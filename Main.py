@@ -39,10 +39,10 @@ def main():
 
             df = pd.DataFrame(np.vstack(np_array), columns=columns_list)  # set df = to total
 
+
     if args.tenptlead is not None:
         df['TurnAround'] = df.apply(lambda row: ChessHandling.ten_point_calculate(row['FEN-Position'], row['Result']),
                                     axis=1)
-        print(df['TurnAround'].tolist())
     if args.write is not None:
         df.to_csv(args.write)
 
@@ -52,10 +52,10 @@ def main():
 
     if args.inputPGN is not None:
         game_list = pgnParser.PGN_2_FEN(args.inputPGN).extract_data()
-
-        for i in list(game_list):
-            print(i)
-
+        [game.convert_moves() for game in game_list]
+        [game.convert_time() for game in game_list]
+        game = game_list[0]
+        print(game.moves)
 
 if __name__ == "__main__":
     main()

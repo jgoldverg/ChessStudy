@@ -15,10 +15,10 @@ columns_list = ["FEN-Position", "#times", "Result", "WhiteR", "BlackR", "E", "EM
 # method takes in string, for convenience I decided to take the whole string and just the fen seperately(not
 def parse_fen(row):
     fen_str_no_space = str(row).split(' ')[0]
+    print(fen_str_no_space)
     white_points = 0
     black_points = 0
     #    positions_to_calculate = str(row).split('\n')
-    print()
     if '#' in str(row):
         return 000
     for c in fen_str_no_space:
@@ -39,7 +39,6 @@ result_options = {'1/2': 0.5, '0-1': -1.0, '1-0': 1.0}
 
 
 def parse_result(row):
-    print(row)
     if row in result_options:
         return result_options.get(row)
     else:

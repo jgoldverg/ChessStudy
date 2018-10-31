@@ -16,7 +16,6 @@ class PGN_2_FEN(object):
 
         with open(self.file) as f:
             for line in f:
-                print(line)
                 if len(line) == 0:
                     continue
                 if line.startswith('[Event'):
@@ -61,10 +60,7 @@ class PGN_2_FEN(object):
                 elif line.startswith('[ECO'):
                     game_list.__getitem__(-1).eco = line
 
-                elif list(line)[0].isdigit() or str(line).startswith('{'):
-                    game_list.__getitem__(-1).moves.append(line)
+                else:
+                    game_list.__getitem__(-1).raw_data.append(line)
 
         return game_list
-
-    def translate_clock(self):
-        return ''

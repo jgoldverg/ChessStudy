@@ -33,8 +33,8 @@ class png_parser_test(unittest.TestCase):
         list(move_to_check)
         self.assertEqual('1. e4 {[%clk 1:23:29]} c5 {[%clk 1:30:39]} ', move_to_check[0])
 
-    def test_clock_converter(self):
+    def test_move_converter(self):
         test_obj = pgnParser.PGN_2_FEN(
             '/home/jacob/ChessIndependentStudy/RAW/wco2018openthru9/wco2018_r01_open.pgn').extract_data()[0]
-        move_to_check = test_obj.convert_clock()
-        self.assertEqual('', move_to_check)
+        move_to_check = test_obj.convert_moves()[1]
+        self.assertEqual('e4', move_to_check)
