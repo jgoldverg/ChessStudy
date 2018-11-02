@@ -10,6 +10,7 @@ class PGN_2_FEN(object):
         self.values = {1: 'Event', 2: 'Site', 3: 'Date', 4: 'Round', 5: 'Board', 6: 'WhiteFideId', 7: 'BlackFideId',
                        8: 'White', 9: 'Black', 10: 'Result', 11: 'LiveChessVersion', 12: "WhiteElo", 13: 'BlackElo',
                        14: 'ECO'}
+        self.game_list = []
 
     def extract_data(self):
         game_list = []
@@ -62,4 +63,4 @@ class PGN_2_FEN(object):
                 else:
                     game_list.__getitem__(-1).raw_data.append(line)
 
-        return game_list
+        self.game_list = game_list

@@ -8,9 +8,6 @@ local_directory_test = '/home/jacob/ChessIndependentStudy/MOVES'
 blackPointsDictionary = {'p': 1, 'r': 5, 'n': 3, 'b': 3, 'q': 9}
 whitePointsDictionary = {'P': 1, 'R': 5, 'N': 3, 'B': 3, 'Q': 9}
 
-columns_list = ["FEN-Position", "#times", "Result", "WhiteR", "BlackR", "E", "EMove", "EMV", "MovePlayed",
-                "MovePlayedValue", "ValueDifference"]
-
 
 # method takes in string, for convenience I decided to take the whole string and just the fen seperately(not
 def parse_fen(row):
@@ -19,17 +16,15 @@ def parse_fen(row):
     black_points = 0
     #    positions_to_calculate = str(row).split('\n')
     if '#' in str(row):
-        return 000
+        return '000'
     for c in fen_str_no_space:
-        if str(c) in blackPointsDictionary.keys():
+        if blackPointsDictionary.keys().__contains__(c):
             black_points += blackPointsDictionary.get(c)
-        elif str(c) in whitePointsDictionary.keys():
+        elif whitePointsDictionary.keys().__contains__(c):
             white_points += whitePointsDictionary.get(c)
-        else:
-            continue
+
     x = white_points - black_points
-    print(x)
-    return int(x)
+    return str(x)
 
 
 # white win is a 1 black win is a -1 and a draw is 1/2 or (.5)
@@ -39,28 +34,20 @@ result_options = {'1/2': 0.5, '0-1': -1.0, '1-0': 1.0}
 
 
 def parse_result(row):
-    if row in result_options:
-        return result_options.get(row)
+    if row in result_options.keys():
+        return int(result_options.get(row))
     else:
         return 0.0
 
 
-# the method using parseResult and parseFen to see if there was a comeback so to speak.
-def ten_point_lead_and_lost(row):
-    if row['Score'] > 900 and row['NoTie'] == -1.0:
-        return 'black flip'
-    elif row['Score'] < -900 and row['NoTie'] == 1.0:
-        return 'white flip'
-    else:
-        return ''
-
-
 def ten_point_calculate(point, result):
-    point = parse_fen(point)
-    result = parse_result(result)
-    if point > 900 and result == -1.0:
+    num = parse_fen(point)
+    res = parse_result(str(result))
+    if str(num) == '000':
+        return 'new game'
+    if int(num) >= 9 and res == -1.0:
         return 'black'
-    elif point < -900 and result == 1.0:
+    elif int(num) <= -9 and res == 1.0:
         return 'white'
     else:
         return ''
@@ -74,7 +61,7 @@ def load_multiple_files(path, column_names):
 
     np_array = []
     for file_ in file_list_names:
-        data_frame = pd.read_csv(local_directory_test + '/' + file_, names=columns_list)
+        data_frame = pd.read_csv(local_directory_test + '/' + file_, names=column_names)
         np_array.append(data_frame.as_matrix())
 
     combo_np = np.vstack(np_array)

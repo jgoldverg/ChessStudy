@@ -23,3 +23,16 @@ class Game(object):
     def convert_time(self):
         self.times = list(
             re.findall(r"{\[%clk (.*?)\]}", str(self.raw_data)))
+
+ #   def remove_clock(self):
+  #      for line in str(self.raw_data):
+
+
+class Move(object):
+
+    def __int__(self, move):
+        self.move = move
+
+    def clean_move(self):
+        for line in self.move:
+            str(line)
