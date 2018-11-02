@@ -15,7 +15,6 @@ columns_list = ["FEN-Position", "#times", "Result", "WhiteR", "BlackR", "E", "EM
 # method takes in string, for convenience I decided to take the whole string and just the fen seperately(not
 def parse_fen(row):
     fen_str_no_space = str(row).split(' ')[0]
-    print(fen_str_no_space)
     white_points = 0
     black_points = 0
     #    positions_to_calculate = str(row).split('\n')
@@ -29,6 +28,7 @@ def parse_fen(row):
         else:
             continue
     x = white_points - black_points
+    print(x)
     return int(x)
 
 
@@ -79,3 +79,11 @@ def load_multiple_files(path, column_names):
 
     combo_np = np.vstack(np_array)
     return combo_np
+
+
+def read_file(file):
+    list = []
+    with open(file) as f:
+        for line in f:
+            inner_list = line.split(',')
+            list.append(inner_list)

@@ -13,7 +13,6 @@ class PGN_2_FEN(object):
 
     def extract_data(self):
         game_list = []
-
         with open(self.file) as f:
             for line in f:
                 if len(line) == 0:

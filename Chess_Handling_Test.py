@@ -18,7 +18,7 @@ class Chess_Handling_Test(unittest.TestCase):
         self.assertEqual(set([39]), ChessHandling.parse_fen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR'))
 
     def test_exception(self):
-        self.assertEqual(set(['new game']), ChessHandling.parse_fen('#GAME'))
+        self.assertEqual('000', ChessHandling.parse_fen('#GAME'))
 
     def test_load_result_shouldBeZero(self):
         self.assertEqual(None, ChessHandling.parse_result('1'))
