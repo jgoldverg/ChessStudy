@@ -22,10 +22,10 @@ def main():
     parser.add_argument("--tenptlead",
                         help="calculate if player had 10pt lead and lost specify specify an int of any value to run this, on current dataframe",
                         type=int, dest='tenptlead')
+    parser.add_argument("--nineptlead", help="calculate if move had a 10pt diff with a loss", dest='nineptlead',
+                        type=int)
     parser.add_argument("--graphDf", help="graph the current loaded dataframe", dest='graphDf', type=int)
-    parser.add_argument('--write',
-                        help='specify path, it will be written as a csv',
-                        type=str, dest='write')
+    parser.add_argument('--write', help='specify path, it will be written as a csv', type=str, dest='write')
     args = parser.parse_args()
     df = pd.DataFrame
 
@@ -34,7 +34,7 @@ def main():
         if int(temp) == 0:  # file
             list = ChessHandling.read_file(args.inputMOVES)
             df = pd.read_csv(args.inputMOVES, names=columns_list)  # read the list returned from read_file()
-            print('loaded file')
+            print('loaded file' + '_'+ '/' +str(args.inputMOVES).split('/')[-1])
         elif int(temp) == 1:  # directory
             file_list_names = os.listdir(args.inputMOVES)  # get specified directory
             np_array = []
@@ -51,10 +51,14 @@ def main():
     if args.tenptlead is not None:
         np_arr = np.array
         np_arr = df.apply(lambda row: ChessHandling.ten_point_calculate(row['FEN-Position'], row['Result']),
-                          axis=1)#this method returns the string white black or empty
+                          axis=1)  # this method returns the string white black or empty
         df['TurnAround'] = np_arr
-        df['TurnAround'].value_counts().head(10).plot.bar()
-        print(df)
+
+    if args.nineptlead is not None:
+        np_emv = np.array(df['MovePlayedValue'].tolist())
+        np_result = np.array(df['Result'].tolist())
+        np_nine_turn = df.apply(lambda row: ChessHandling.nine_pt_calculate(row['MovePlayedValue'], row['Result']),axis=1)
+        df['NinePtFlip'] = np_nine_turn
 
     if args.write is not None:
         file = args.write

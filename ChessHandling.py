@@ -53,6 +53,18 @@ def ten_point_calculate(point, result):
         return ''
 
 
+def nine_pt_calculate(EMV, result):
+    res = parse_result(str(result))
+    if str(result).__contains__(';'):
+        return 'new game'
+    elif EMV > 900 and res == -1.0:
+        return 'black'
+    elif EMV < -900 and res == 1.0:
+        return 'white'
+    else:
+        return
+
+
 def load_multiple_files(path, column_names):
     if path is None:
         file_list_names = os.listdir(local_directory_test)
