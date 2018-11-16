@@ -12,6 +12,7 @@ class Game(object):
     def convert_moves(self):
         self.strip_moves()
         self.moves = list(re.findall("(?:\d+\.\s+)?(.*?)\s+\{[^}]*\}(?:\s+\d+\.\s+)?", str(self.raw_data)))
+        self.moves = list(re.findall(""))
 
     def strip_moves(self):
         stripped_moves = [move.strip() for move in self.raw_data]

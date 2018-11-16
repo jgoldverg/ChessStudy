@@ -50,19 +50,18 @@ def ten_point_calculate(point, result):
     elif int(num) <= -9 and res == 1.0:
         return 'white'
     else:
-        return ''
+        return '000'
 
 
-def nine_pt_calculate(EMV, result):
-    res = parse_result(str(result))
-    if str(result).__contains__(';'):
-        return 'new game'
+def nine_pt_calculate(EMV, res):
+    if str(res).__contains__(';'):
+        return -1000
     elif EMV > 900 and res == -1.0:
-        return 'black'
+        return -1
     elif EMV < -900 and res == 1.0:
-        return 'white'
+        return 1
     else:
-        return
+        return 0
 
 
 def load_multiple_files(path, column_names):
@@ -86,3 +85,6 @@ def read_file(file):
         for line in f:
             inner_list = line.split(',')
             list.append(inner_list)
+
+
+

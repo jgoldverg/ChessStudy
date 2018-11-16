@@ -5,12 +5,16 @@ import os
 import numpy as np
 import AIF2JSON_MDv2 as aifToJson
 import pgnParser
+from sklearn import datasets, linear_model
+from sklearn.model_selection import train_test_split
+import AI_File
 import matplotlib.pyplot as plt
 import csv
 
+df = pd.DataFrame
+
 
 # Example Run python3 Main.py --input/dir/.txt --tenptlead 1 --write/dir/filename.txt
-
 def main():
     print('hi')
     columns_list = ["FEN-Position", "#times", "Result", "WhiteR", "BlackR", "E", "EMove", "EMV", "MovePlayed",
@@ -26,16 +30,17 @@ def main():
                         type=int)
     parser.add_argument("--graphDf", help="graph the current loaded dataframe", dest='graphDf', type=int)
     parser.add_argument('--write', help='specify path, it will be written as a csv', type=str, dest='write')
+    parser.add_argument('--clean', help='clean file', type=int, dest='clean')
     args = parser.parse_args()
-    df = pd.DataFrame
+    df_analyzeObj = None
 
     if args.inputMOVES is not None:
         temp = input('is this a directory(1) or a file(0) ')
         if int(temp) == 0:  # file
             list = ChessHandling.read_file(args.inputMOVES)
             df = pd.read_csv(args.inputMOVES, names=columns_list)  # read the list returned from read_file()
-            print('loaded file' + '_'+ '/' +str(args.inputMOVES).split('/')[-1])
-        elif int(temp) == 1:  # directory
+            print('loaded file' + '_' + '/' + str(args.inputMOVES).split('/')[-1])
+        else:  # directory
             file_list_names = os.listdir(args.inputMOVES)  # get specified directory
             np_array = []
             for file_ in file_list_names:
@@ -44,8 +49,21 @@ def main():
                                          names=columns_list)  # make dataframe per file then combine them using a numpy array
                 print(file_ + '/t loaded', end=' ')
                 np_array.append(data_frame.values)  # attatch dataframe to numpy array
-
             df = pd.DataFrame(np.vstack(np_array), columns=columns_list)  # set df = to total
+
+        print('done loading files')
+        df_analyzeObj = AI_File.CleanAndAnalyze(df)
+        df_analyzeObj.clean_df()
+        df_analyzeObj.convert_result_to_numeric()
+        print('After loading file head')
+        print(df_analyzeObj.df.head())
+#        feature_str = input('Enter features you would like to graph as csv')
+ #       list_feature = feature_str.strip().split(',')
+#        target_str = input('What are you trying to study? give me a target cause me hungry!!!')
+  #      target_str.strip()
+   #     df = df.fillna
+    #    list_target = target_str.split(',')
+     #   df_analyzeObj.graph_cols(list_feature, list_target)
 
     # if the TurnAround column is not writing to file then it is full of NaN as in those elements were not populated
     if args.tenptlead is not None:
@@ -55,14 +73,12 @@ def main():
         df['TurnAround'] = np_arr
 
     if args.nineptlead is not None:
-        np_emv = np.array(df['MovePlayedValue'].tolist())
-        np_result = np.array(df['Result'].tolist())
-        np_nine_turn = df.apply(lambda row: ChessHandling.nine_pt_calculate(row['MovePlayedValue'], row['Result']),axis=1)
-        df['NinePtFlip'] = np_nine_turn
+        print('nine pt lead')
+        df_analyzeObj.nine_pt_lead()
 
     if args.write is not None:
         file = args.write
-        df.to_csv(file)
+        df_analyzeObj.df.to_csv(file)
 
     if args.inputAIF is not None:
         file = args.inputAIF
@@ -70,11 +86,14 @@ def main():
         print(json)
 
     if args.inputPGN is not None:
-        game_list = pgnParser.PGN_2_FEN(args.inputPGN).extract_data()
-        [game.convert_moves() for game in game_list]
-        [game.convert_time() for game in game_list]
+        pgnObj = pgnParser.PGN_2_FEN(args.inputPGN)
+        pgnObj.extract_data()
+        game_list = pgnObj.game_list
+        print('done loading pgn file')
+        print('total amount of games in file: ' + str(len(game_list)))
+        [item.convert_moves() for item in game_list]
+        [item.convert_time() for item in game_list]
         game = game_list[0]
-        print(game.moves)
 
 
 if __name__ == "__main__":
