@@ -1,7 +1,6 @@
 import os
 import Game
-
-
+import re
 class PGN_2_FEN(object):
 
     def __init__(self, file):
@@ -16,8 +15,6 @@ class PGN_2_FEN(object):
         game_list = []
         with open(self.file) as f:
             for line in f:
-                if len(line) == 0:
-                    continue
                 if str(line).__contains__('[Event'):
                     game_list.append(Game.Game(line))
 

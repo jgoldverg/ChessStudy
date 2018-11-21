@@ -11,8 +11,11 @@ class Game(object):
 
     def convert_moves(self):
         self.strip_moves()
-        self.moves = list(re.findall("(?:\d+\.\s+)?(.*?)\s+\{[^}]*\}(?:\s+\d+\.\s+)?", str(self.raw_data)))
-        self.moves = list(re.findall(""))
+        temp = str(self.raw_data).replace("'", "")
+        too = str(temp).replace(",", "")
+        self.moves = list(re.findall('(?:\d+\.\s+)?(.*?)\s+\{[^}]*\}(?:\s+\d+\.\s+)?', too))
+
+
 
     def strip_moves(self):
         stripped_moves = [move.strip() for move in self.raw_data]
@@ -24,9 +27,6 @@ class Game(object):
     def convert_time(self):
         self.times = list(
             re.findall(r"{\[%clk (.*?)\]}", str(self.raw_data)))
-
- #   def remove_clock(self):
-  #      for line in str(self.raw_data):
 
 
 class Move(object):
