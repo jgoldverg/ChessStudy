@@ -57,6 +57,8 @@ class PGN_2_FEN(object):
                 elif line.startswith('[ECO'):
                     game_list.__getitem__(len(game_list)-1).eco = line
 
+                elif line.__contains__(';'):
+                    continue
                 else:
                     game_list.__getitem__(len(game_list)-1).raw_data.append(line)
 

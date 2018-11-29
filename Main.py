@@ -4,11 +4,12 @@ import ChessHandling
 import os
 import numpy as np
 import pgnParser
-from sklearn import datasets, linear_model
-from sklearn.model_selection import train_test_split
-import AI_File
+from sklearn.model_selection import cross_val_predict
+from sklearn import linear_model
+from sklearn import datasets
 import matplotlib.pyplot as plt
-import csv
+import AI_File
+import seaborn as sns
 
 df = pd.DataFrame
 
@@ -23,9 +24,6 @@ def main():
     parser.add_argument("--inputAIF", help="input AIF Path, .png files", dest='inputAIF', type=str)
     parser.add_argument("--inputPGN", help="input PGN Path, .png files", dest='inputPGN', type=str)
     parser.add_argument("--average", help="create average column", dest='average', type=int)
-    parser.add_argument("--tenptlead",
-                        help="calculate if player had 10pt lead and lost specify specify an int of any value to run this, on current dataframe",
-                        type=int, dest='tenptlead')
     parser.add_argument("--nineptlead", help="calculate if move had a 10pt diff with a loss", dest='nineptlead',
                         type=int)
     parser.add_argument("--graph", help="graph the current loaded dataframe", dest='graph', type=int)
@@ -79,17 +77,26 @@ def main():
         game_list = pgnObj.game_list
         print('done loading pgn file')
         print('total amount of games in file: ' + str(len(game_list)))
-        game = game_list[0]
         for item in game_list:
             item.convert_time()
             item.convert_moves()
+            item
+
+        game = game_list[1]
+        print(game.moves)
+        print(game.times)
 
     if args.graph is not None:
         print(df_analyzeObj.df.head())
-        feature_str = input('Enter features you would like to graph as csv')
-        target_str = input('What are you trying to study? Give me a target cause me hungry!!!')
-        target_str.strip()
-        df_analyzeObj.graph_input(feature_str, target_str)
+        #  feature = np.array(df_analyzeObj.df['FEN-Position'].values, df_analyzeObj.df['EMV'].values)
+        input()
+        ninept_list = df_analyzeObj.df['NinePtlead'].values.tolist()
+        values_list = df_analyzeObj.df['EMV'].values.tolist()
+
+        sns.distplot(values_list, bins=5)
+        title = input('name of title for graph: ')
+        plt.title(title)
+        plt.show()
 
 
 if __name__ == "__main__":

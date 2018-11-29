@@ -5,6 +5,7 @@ import matplotlib.pylab as plt
 from sklearn.linear_model import LinearRegression
 from sklearn import datasets
 import ChessHandling
+import time
 
 
 class CleanAndAnalyze(object):
@@ -35,16 +36,18 @@ class CleanAndAnalyze(object):
         self.df['NinePtlead'] = self.df.apply(
             lambda row: self.__nine_pt_calculate(row['MovePlayedValue'], row['Result']), axis=1)
         print(self.df.head())
+        location = input('please provide file to write rows with a nineptlead and a lost')
+
 
     def __nine_pt_calculate(self, move_value_played, result):
         if str(result).__contains__(';'):
-            return '-1000'
+            return 2.5 #dummy value
         elif move_value_played > 900 and result.__eq__('0-1'):
-            return 'black'
+            return -1 #black
         elif move_value_played < -900 and result.__eq__('1-0'):
-            return 'white'
+            return 1 #white
         else:
-            return 'd.c'
+            return 0 #whatever
 
     def average_calculate(self):
         move_col = []
@@ -70,10 +73,10 @@ class CleanAndAnalyze(object):
         average_white_emv = white_arr.mean()
         average_black_mvp = black_np_mvp.mean()
         average_white_mvp = white_np_mvp.mean()
-        print('EMV white: '+ str(average_white_emv) + ' white average is: ' + str(average_black_emv))
-        print('MoveValuePlayed white: '+ str(average_white_mvp) + ' black: ' + str(average_black_mvp))
+        print('EMV white: ' + str(average_white_emv) + ' white average is: ' + str(average_black_emv))
+        print('MoveValuePlayed white: ' + str(average_white_mvp) + ' black: ' + str(average_black_mvp))
 
-    def graph_input(self, feature, target):
+    def graph_(self, feature, target):
         X = np.array(self.df[str(feature)])
         y = np.array(self.df[str(target)])
         plt.plot(X, y)
@@ -93,3 +96,4 @@ class CleanAndAnalyze(object):
         y = x
         plt.plot(x, y)
         plt.show()
+
