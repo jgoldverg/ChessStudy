@@ -4,9 +4,11 @@ import ChessHandling
 import os
 import numpy as np
 import pgnParser
-from sklearn.model_selection import cross_val_predict
+from sklearn.model_selection import train_test_split
 from sklearn import linear_model
 from sklearn import datasets
+from sklearn.linear_model import LinearRegression
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import AI_File
 import seaborn as sns
@@ -29,47 +31,76 @@ def main():
     parser.add_argument("--graph", help="graph the current loaded dataframe", dest='graph', type=int)
     parser.add_argument('--write', help='specify path, it will be written as a csv', type=str, dest='write')
     parser.add_argument('--clean', help='clean file', type=int, dest='clean')
+    parser.add_argument('--regression', help='start regression enter 1 for linear 2 logistic 3 polynomial regression',
+                        dest='reg', type=int)
     args = parser.parse_args()
-    df_analyzeObj = None
+    df_analyzeobj = None  # when working with a single file use this
+    df_array_analyze = []  # list of ai objects when working with a directory
+    df_array = []  # raw dataframe list when working with a directory
+    dirorfile = input('is this a directory(1) or a file(0)')
 
     if args.inputMOVES is not None:
-        temp = input('is this a directory(1) or a file(0) ')
-        if int(temp) == 0:  # file
-            list = ChessHandling.read_file(args.inputMOVES)
-            df = pd.read_csv(args.inputMOVES, names=columns_list)  # read the list returned from read_file()
+        if int(dirorfile) == 0:  # file
+            df_analyzeobj = AI_File.CleanAndAnalyze(pd.read_csv(args.inputMOVES, names=columns_list))
             print('loaded file' + '_' + '/' + str(args.inputMOVES).split('/')[-1])
+            print('cleaned df')
         else:  # directory
             file_list_names = os.listdir(args.inputMOVES)  # get specified directory
-            np_array = []
-            for file_ in file_list_names:
-                temp = args.inputMOVES
-                data_frame = pd.read_csv(temp + '/' + file_,
-                                         names=columns_list)  # make dataframe per file then combine them using a numpy array
-                print(file_ + '/t loaded', end=' ')
-                np_array.append(data_frame.values)  # attatch dataframe to numpy array
-            df = pd.DataFrame(np.vstack(np_array), columns=columns_list)  # set df = to total
-
+            print('amounnt of files in the directory')
+            print(len(file_list_names))  # the list of directories to double check
+            for iter_file in file_list_names:  # iterate through all files inside of directory
+                print(iter_file + '/t loaded', end=' ')
+                df_array_analyze.append(AI_File.CleanAndAnalyze(pd.read_csv(args.inputMOVES + '/' + iter_file,
+                                                                            names=columns_list)))  # putting the dataframe into AI object and storing it in a list
         print('done loading files')
-        df_analyzeObj = AI_File.CleanAndAnalyze(df)
-        df_analyzeObj.clean_df()
         print('After loading file head')
 
     if args.nineptlead is not None:
         print('nine pt lead')
-        print(df_analyzeObj.df.head())
-        df_analyzeObj.nine_pt_lead()
+        input('you still there? Press enter ')
+        if int(dirorfile) == 1:  # is this a directory?
+            print('nineptlead loading')
+            [x.nine_pt_lead() for x in df_array_analyze]
+            print(str(len(df_array_analyze)) + 'the amount of files loaded and dataframes created')
+        else:
+            df_analyzeobj.nine_pt_lead()
         print('finished nineptlead')
+
+    if args.graph is not None:
+        print('graphing')
+        visualize = input('1:describe, 2:histogram, 3:linear regression')
+        if int(visualize) == 1:
+            print(df_analyzeobj.df.describe())
+        elif int(visualize) == 2:
+            df_analyzeobj.clean_df()
+            df_analyzeobj.make_hist()
+        elif int(visualize) == 3:
+            X = input('enter feature to set as the X')
+            y = input('enter target to set as y')
+            df_analyzeobj.linear_regression(X, y)
+            plt.show()
+        elif int(visualize) == 4:
+            X = input('enter feature to set as the X')
+            y = input('enter target to set as y')
+            df_analyzeobj.linear_regression(X, y)
+            plt.show()
+
 
     if args.write is not None:
         print('starting to write file')
-        df_analyzeObj.df.to_csv(args.write)
+        if dirorfile == 1:
+            try:
+                dir_write = input('Enter directory to create for the writing of df')
+                os.mkdir(dir_write)
+                [df.df.to_csv(dir_write) for df in df_array_analyze]
+            except FileExistsError:
+                print('the directory exists broooooo')
+    else:
+        df_analyzeobj.df.to_csv(args.write)
 
     if args.inputAIF is not None:
         file = args.inputAIF
         print(file)
-
-    if args.average is not None:
-        df_analyzeObj.average_calculate()
 
     if args.inputPGN is not None:
         pgnObj = pgnParser.PGN_2_FEN(args.inputPGN)
@@ -80,23 +111,10 @@ def main():
         for item in game_list:
             item.convert_time()
             item.convert_moves()
-            item
 
         game = game_list[1]
         print(game.moves)
         print(game.times)
-
-    if args.graph is not None:
-        print(df_analyzeObj.df.head())
-        #  feature = np.array(df_analyzeObj.df['FEN-Position'].values, df_analyzeObj.df['EMV'].values)
-        input()
-        ninept_list = df_analyzeObj.df['NinePtlead'].values.tolist()
-        values_list = df_analyzeObj.df['EMV'].values.tolist()
-
-        sns.distplot(values_list, bins=5)
-        title = input('name of title for graph: ')
-        plt.title(title)
-        plt.show()
 
 
 if __name__ == "__main__":

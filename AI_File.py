@@ -3,6 +3,8 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import matplotlib.pylab as plt
 from sklearn.linear_model import LinearRegression
+# matplotlib.use('Agg')
+
 from sklearn import datasets
 import ChessHandling
 import time
@@ -19,35 +21,40 @@ class CleanAndAnalyze(object):
         result_converted = self.df['Result'].map(self.result_options).tolist()
         self.df.drop(['Result'], axis=1, inplace=True)
         result_conv_series = pd.Series(result_converted)
-        print('hello converting to numeric')
         self.df['Result'] = result_conv_series
 
     def clean_df(self):
         fen_clean = np.array(self.df['FEN-Position'].tolist())
-        print('starting cleaning of dataframe post loading')
         for idx, elem in enumerate(fen_clean):
             if str(fen_clean[idx]).__contains__('#'):
                 self.elems_game_start.append({idx, elem})
                 self.df.drop(idx, inplace=True)
-        print(len('total new game lines: ' + str(len(self.elems_game_start))))
 
     def nine_pt_lead(self):
-        print('nineptlead')
         self.df['NinePtlead'] = self.df.apply(
             lambda row: self.__nine_pt_calculate(row['MovePlayedValue'], row['Result']), axis=1)
         print(self.df.head())
-        location = input('please provide file to write rows with a nineptlead and a lost')
-
 
     def __nine_pt_calculate(self, move_value_played, result):
         if str(result).__contains__(';'):
-            return 2.5 #dummy value
+            return 2.5  # dummy value
         elif move_value_played > 900 and result.__eq__('0-1'):
-            return -1 #black
+            return -1  # black
         elif move_value_played < -900 and result.__eq__('1-0'):
-            return 1 #white
+            return 1  # white
         else:
-            return 0 #whatever
+            return 0  # whatever
+
+    def _frequency_of_missed_check_mates(self):
+        self.clean_df()
+        X_train, X_test, y_train, y_test = train_test_split(np.array(self.df['EMV']).reshape(-1, 1),
+                                                            self.df['NinePtlead'].tolist(), test_size=0.4,
+                                                            random_state=101)
+        lm = LinearRegression()
+        lm.fit(X_train, y_train)
+        predictions = lm.predict(X_test)
+        plt.scatter(y_test, predictions)
+        plt.show()
 
     def average_calculate(self):
         move_col = []
@@ -75,25 +82,42 @@ class CleanAndAnalyze(object):
         average_white_mvp = white_np_mvp.mean()
         print('EMV white: ' + str(average_white_emv) + ' white average is: ' + str(average_black_emv))
         print('MoveValuePlayed white: ' + str(average_white_mvp) + ' black: ' + str(average_black_mvp))
+        return [{average_white_emv, average_white_mvp}, {average_black_emv, average_black_mvp}]
 
     def graph_(self, feature, target):
+        self.clean_df()
         X = np.array(self.df[str(feature)])
         y = np.array(self.df[str(target)])
-        plt.plot(X, y)
-        print(X)
-        print(y)
-        X_test, X_train, y_train, y_test = train_test_split(X, y, test_size=.2, random_state=0)
+        X_test, X_train, y_train, y_test = train_test_split(X, y)
         print('split data')
         model = LinearRegression()
         model.fit(X_train, y_train)
         print('ran fit')
         print('model score on given data:' + str(model.score(X_test, y_test)))
-        y_pred = model.predict(X=X_test)
-        plt.plot(y_test, y_pred, '.')
 
         # plot a line, a perfit predict would all fall on this line
-        x = np.linspace(0, 330, 100)
-        y = x
-        plt.plot(x, y)
-        plt.show()
 
+    def group_emv(self):  # the way i see it is every emv can be grouped together by a variance of 30
+        grouped = self.df.groupby(['EMV', 'MoveValuePlayed'])
+
+    def make_hist(self):
+        self.df.plot.hist()
+        name = input('enter name for histogram: ')
+        self.save(name)
+
+    def linear_regression(self, feature, target):
+        self.clean_df()
+        X = pd.to_numeric(self.df[str(feature)])
+        y = pd.to_numeric(self.df[str(target)])
+        X_train, X_test, y_train, y_test = train_test_split(np.array(X).reshape(-1, 1), y, test_size=0.4, random_state=101)
+        lm = LinearRegression()
+        lm.fit(X_train, y_train)
+        predictions = lm.predict(X_test)
+        plt.scatter(y_test, predictions)
+        plt.xlabel(feature)
+        plt.ylabel(target)
+        name = input('file name: ')
+        self.save(name)
+
+    def save(self, name):
+        plt.savefig(name)
