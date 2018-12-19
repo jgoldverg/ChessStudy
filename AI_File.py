@@ -1,123 +1,206 @@
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-import matplotlib.pylab as plt
 from sklearn.linear_model import LinearRegression
-# matplotlib.use('Agg')
 
-from sklearn import datasets
-import ChessHandling
-import time
+import matplotlib
+
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import random as rnd
 
 
 class CleanAndAnalyze(object):
-    result_options = {'1/2': 0, '0-1': -1, '1-0': 1}
+    columns_list = ["FEN-Position", "#times", "Result", "WhiteR", "BlackR", "E", "EMove", "EMV", "MovePlayed",
+                    "MovePlayedValue", "ValueDifference"]
+    z_dictionary = {}
 
     def __init__(self, df):
-        self.df = pd.DataFrame(df)
+        self.df = pd.DataFrame(df)  # need to create the dataframe to process before dont need to clean
         self.elems_game_start = []
+        self.df_relevant = pd.DataFrame
+        self.rating_group_dict_to_z = {}
 
-    def convert_result_to_numeric(self):
-        result_converted = self.df['Result'].map(self.result_options).tolist()
-        self.df.drop(['Result'], axis=1, inplace=True)
-        result_conv_series = pd.Series(result_converted)
-        self.df['Result'] = result_conv_series
+    def clean(self):  # cleaning method, it takes away all of the line information and drops them
+        arr = np.array(self.df['FEN-Position'].tolist())
+        arr_games = []
+        indexs = []
+        game_count = 0
+        for idx, row in self.df.iterrows():
+            if str(row['FEN-Position']).__contains__('#'):
+                game_count += 1
+                indexs.append(idx)
+                self.elems_game_start.append({row['FEN-Position'], arr[idx + 1]})
+                arr_games.append(game_count)
+            else:
+                arr_games.append(game_count)
 
-    def clean_df(self):
-        fen_clean = np.array(self.df['FEN-Position'].tolist())
-        for idx, elem in enumerate(fen_clean):
-            if str(fen_clean[idx]).__contains__('#'):
-                self.elems_game_start.append({idx, elem})
-                self.df.drop(idx, inplace=True)
-
-    def nine_pt_lead(self):
-        self.df['NinePtlead'] = self.df.apply(
-            lambda row: self.__nine_pt_calculate(row['MovePlayedValue'], row['Result']), axis=1)
+        self.df['NewGame'] = np.array(arr_games)
+        self.drop_extra(indexs)
+        print('size of cleaned df is ' + str(self.df['FEN-Position'].size))
         print(self.df.head())
 
-    def __nine_pt_calculate(self, move_value_played, result):
-        if str(result).__contains__(';'):
-            return 2.5  # dummy value
-        elif move_value_played > 900 and result.__eq__('0-1'):
-            return -1  # black
-        elif move_value_played < -900 and result.__eq__('1-0'):
-            return 1  # white
-        else:
-            return 0  # whatever
+    def drop_extra(self, indexs_to_drop):
+        self.df.drop(self.df.index[indexs_to_drop], inplace=True, axis=0)
+        self.df.drop(['#times', 'E', 'EMove', 'MovePlayed', 'ValueDifference'], inplace=True, axis=1)
+        self.df.dropna(inplace=True)
 
-    def _frequency_of_missed_check_mates(self):
-        self.clean_df()
-        X_train, X_test, y_train, y_test = train_test_split(np.array(self.df['EMV']).reshape(-1, 1),
-                                                            self.df['NinePtlead'].tolist(), test_size=0.4,
-                                                            random_state=101)
-        lm = LinearRegression()
-        lm.fit(X_train, y_train)
-        predictions = lm.predict(X_test)
-        plt.scatter(y_test, predictions)
-        plt.show()
+    def group_games(self):
+        new_game_col = self.df['NewGame'].values.tolist()
+        new_game_np = np.array(new_game_col)
 
-    def average_calculate(self):
-        move_col = []
-        white_emv = []
-        black_emv = []
-        white_mvp = []
-        black_mvp = []
+    def create_all_columns(self):
+        # slowest way to iterate over a dataframe but it makes sense currently
+        average_rating = []  # this is the average rating but skewed to be more of a group
+        loc = []  # length of checkmate
+        nine_pt_lead = []
+        rating_group = []
         for idx, row in self.df.iterrows():
-            current = row['EMV']
-            turn = str(row['FEN-Position']).split(' ')[1]
-            if idx > 1:
-                if idx % 2 == 0 and turn == 'b':  # this means black move bc white always has first move aka odd numbers black being even
-                    black_emv.append(row['EMV'])
-                    black_mvp.append(row['MovePlayedValue'])
-                else:  # for white when idx is odd
-                    white_emv.append(row['EMV'])
-                    white_mvp.append(row['MovePlayedValue'])
-        black_np_mvp = np.array(black_mvp)
-        white_np_mvp = np.array(white_mvp)
-        black_arr = np.array(black_emv)
-        white_arr = np.array(white_emv)
-        average_black_emv = black_arr.mean()
-        average_white_emv = white_arr.mean()
-        average_black_mvp = black_np_mvp.mean()
-        average_white_mvp = white_np_mvp.mean()
-        print('EMV white: ' + str(average_white_emv) + ' white average is: ' + str(average_black_emv))
-        print('MoveValuePlayed white: ' + str(average_white_mvp) + ' black: ' + str(average_black_mvp))
-        return [{average_white_emv, average_white_mvp}, {average_black_emv, average_black_mvp}]
+            if pd.isna(row['WhiteR']):
+                print('dropping this row')
+                print(row['FEN-Position'])
+                self.df.drop(row, inplace=True)
+            average_rating.append(self.average_rating(row['WhiteR'], row['BlackR']))
+            loc.append(self.y_length_of_checkmate(row))
+            nine_pt_lead.append(self.nine_enhanced(row))
+            rating_group.append(self.rating_group(row['WhiteR'], row['BlackR']))
 
-    def graph_(self, feature, target):
-        self.clean_df()
-        X = np.array(self.df[str(feature)])
-        y = np.array(self.df[str(target)])
-        X_test, X_train, y_train, y_test = train_test_split(X, y)
-        print('split data')
-        model = LinearRegression()
-        model.fit(X_train, y_train)
-        print('ran fit')
-        print('model score on given data:' + str(model.score(X_test, y_test)))
+        self.df['NinePtLead'] = nine_pt_lead
+        self.df['AverageRating'] = average_rating
+        self.df['Rating_Group'] = rating_group
+        self.df['length_of_checkmate'] = loc
 
-        # plot a line, a perfit predict would all fall on this line
+    def average_rating(self, white, black):  # Average rating to 25
+        avg = (float(white) + float(black)) / 2
+        return int(round(avg / 25) * 25)
 
-    def group_emv(self):  # the way i see it is every emv can be grouped together by a variance of 30
-        grouped = self.df.groupby(['EMV', 'MoveValuePlayed'])
+    def rating_group(self, white, black):
+        avg = float(white) + float(black)
+        avg = avg / 2
+        return int(round(avg) / 200) * 200
 
+    # creating two columns nineptlead column and the average rating column, taking the average of the row and rounding to the highest multiple of 25
+    # def nine_pt_lead_and_average_rating(self):
+    #     # calculate the average rating of every single line
+    #     self.df['AverageRating'] = self.df.apply(lambda row: self.average_rating(row['WhiteR'], row['BlackR']), axis=1)
+    #     # apply calc_nine_pt_lead to every single row of the dataframe
+    #     self.df['NinePtLead'] = self.df.apply(lambda row: self.nine_pt_lead(row), axis=1)
+    #     # calculate the length of checkmate every single row of the dataframe
+    #     self.df['length_of_checkmate'] = self.df.apply(lambda row: self.y_length_of_checkmate(row), axis=1)
+    #     print(self.df.head())  # print the head everytime so i know it hasnt frozen
+
+    # takes in move value played engine move value and result
+    # EMV -- engine move value
+    # result column 0-1, 1-0, 1/2
+    def nine_pt_lead(self, row):
+        EMV = int(row['EMV'])
+        result = str(row['Result'])
+        if (EMV >= 10000) or (EMV <= -10000):
+            if result == '1/2-1/2':
+                return 'mate'
+            elif result == '0-1' and EMV > 0:
+                return 'choked'
+            elif EMV < 0 and result == '1-0':
+                return 'choked'
+            else:
+                return 'mate'
+        elif (901 < EMV < 10000) or (-901 > EMV > -10000):
+            return 'weird'
+        else:
+            return 'useless'
+
+    def nine_enhanced(self, row):
+        EMV = int(row['EMV'])
+        result = str(row['Result'])
+        if EMV >= 90000 and result != '1-0' or EMV <= -90000 and result != '0-1':
+            return 'missedMate'
+        elif EMV >= 900 and result != '1-0' or EMV <= -900 and result != '0-1':
+            return 'lostBigLead'
+        else:
+            return 'useless'
+
+    def y_length_of_checkmate(self, row):
+        EMV = int(row['EMV'])
+        if abs(EMV) >= 99000:
+            return 100000-abs(EMV)
+        else:
+            return 0
+
+    # grouping function for  class specific dataframe
+    def group_mates(self, target):  # the way i see it is every emv can be grouped together by a variance of 30
+        nine_group = self.df[str(target)].value_counts().to_dict()
+        return nine_group
+
+    # make a hist passing the method to a list
     def make_hist(self):
-        self.df.plot.hist()
-        name = input('enter name for histogram: ')
-        self.save(name)
+        # self.df.plot.hist() #local copy cant run on metallica
+        print(self.df.head())
+        col_hist = input('Enter column to do histogram of: ')
+        plt.hist(self.df[col_hist])
+        plt.xlabel(input('x-label'))
+        plt.ylabel(input('Enter y label'))
+        plt.title(input('Enter Title Name for this Histogram!'))
+        self.save('histogram_nineptlead')
 
-    def linear_regression(self, feature, target):
-        self.clean_df()
-        X = pd.to_numeric(self.df[str(feature)])
-        y = pd.to_numeric(self.df[str(target)])
-        X_train, X_test, y_train, y_test = train_test_split(np.array(X).reshape(-1, 1), y, test_size=0.4, random_state=101)
+    # This returns a list of relelvant rows to the current program so where ever there is a value
+    def create_relevant_list(self):
+        index_drop = self.df[self.df['length_of_checkmate'] == 0].index
+        self.df.drop(index_drop, inplace=True)
+
+    #
+    def make_z(self):
+        temp = self.df[self.df['length_of_checkmate'] > 0]
+        x = temp['Rating_Group'].value_counts().to_dict()
+        y = temp['length_of_checkmate'].value_counts().to_dict()
+        z = temp[ temp['NinePtLead'] == 'choked'] #all positions where the player choked and had a length of checkmate greater than 0
+        print(pd.crosstab(temp['Rating_Group'].values, temp['length_of_checkmate'].values))
+        print(y)
+        print(temp.groupby(['Rating_Group', 'length_of_checkmate']))
+
+    # single var regression of specified feature and target will get from user input
+    def linear_regression(self):
+        self.create_relevant_list()
+        self.make_z()
+        print(self.df.head())
+#        lm = LinearRegression().fit(X = self.df[])
+
+        print('end of linear regression')
+
+    # multi var linear regression
+    def multi_linear_reg(self, feature, target):
+        X = self.df[feature]
+        y = self.df[target]
         lm = LinearRegression()
-        lm.fit(X_train, y_train)
-        predictions = lm.predict(X_test)
-        plt.scatter(y_test, predictions)
+        lm.fit(X, y)
+        predictions = lm.predict(y)
+        plt.scatter(X, predictions)
+        plt.title(feature + ' ' + target)
         plt.xlabel(feature)
         plt.ylabel(target)
         name = input('file name: ')
-        self.save(name)
+        self.save(name + 'multilinearreg')
 
+    # function needed for metallica
     def save(self, name):
-        plt.savefig(name)
+        name = name.strip()
+        plt.savefig(name + '.png')
+
+    def get_train_test_inds(self, y, train_proportion=0.7):
+        '''Generates indices, making random stratified split into training set and testing sets
+        with proportions train_proportion and (1-train_proportion) of initial sample.
+        y is any iterable indicating classes of each observation in the sample.
+        Initial proportions of classes inside training and
+        testing sets are preserved (stratified sampling).
+        '''
+        y = np.array(y)
+        train_inds = np.zeros(len(y), dtype=bool)
+        test_inds = np.zeros(len(y), dtype=bool)
+        values = np.unique(y)
+        for value in values:
+            value_inds = np.nonzero(y == value)[0]
+            np.random.shuffle(value_inds)
+            n = int(train_proportion * len(value_inds))
+
+            train_inds[value_inds[:n]] = True
+            test_inds[value_inds[n:]] = True
+
+        return train_inds, test_inds
