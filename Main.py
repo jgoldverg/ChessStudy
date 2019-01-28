@@ -18,9 +18,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--inputMOVES", help="input MOVES", dest='inputMOVES', type=str)
     parser.add_argument("--inputPGN", help="input PGN Path, .png files", dest='inputPGN', type=str)
-    parser.add_argument("--average", help="create average column", dest='average', type=int)
-    parser.add_argument("--nineptlead", help="calculate if move had a 10pt diff with a loss", dest='nineptlead',
-                        type=int)
     parser.add_argument("--graph", help="graph the current loaded dataframe", dest='graph', type=int)
     parser.add_argument('--write', help='specify path, it will be written as a csv', type=str, dest='write')
     parser.add_argument('--clean', help='clean file', type=int, dest='clean')
@@ -64,16 +61,9 @@ def main():
 
     if args.normal is not None:
         print('reading normal file')
-        index_list = ['FEN-Position', 'Result', 'WhiteR', 'BlackR', 'EMV', 'MovePlayedValue', 'NewGame', 'NinePtLead',
-                    'Rating_Group', 'length_of_checkmate', 'loc_group']
-        df_analyzeobj = AI_File.CleanAndAnalyze(pd.read_csv(args.normal, names=index_list, low_memory=False))
-
-    if args.nineptlead is not None:
-        print('Nine Point Lead stage')
-        #df_analyzeobj.clean()
-        df_analyzeobj.create_all_columns()
-        print('finished nineptlead')
-        print(df_analyzeobj.df.head())
+        columns_list = ["FEN-Position", "#times", "Result", "WhiteR", "BlackR", "E", "EMove", "EMV", "MovePlayed",
+                        "MovePlayedValue", "ValueDifference", 'Game', 'NinePtLead', 'Rating_Group', 'length_of_checkmate', 'loc_group']
+        df_analyzeobj = AI_File.CleanAndAnalyze(pd.read_csv(args.normal, names=columns_list, low_memory=False))
 
     if args.graph is not None:
         visualize = 0
@@ -94,8 +84,9 @@ def main():
                 column = str(input('Enter column to do a histogram on'))
                 df_analyzeobj.make_hist(column)
             elif int(visualize) == 3:
-                t = input('Do regression on loc_group or do it or on the ratings of the dataframe: 1 for ratings 2 for loc: ')
-                df_analyzeobj.linear_regression(t)
+                t = input('Do regression on loc_group or do it or on the ratings of the dataframe: 1_moves for ratings 2 for loc_moves:  1_games for ratings, 2_games for loc moves')
+                #df_analyzeobj.linear_regression(t)
+                df_analyzeobj.game_analysis()
             elif int(visualize) == 4:
                 df_analyzeobj.multi_linear_reg()
             else:
