@@ -84,9 +84,8 @@ def main():
                 column = str(input('Enter column to do a histogram on'))
                 df_analyzeobj.make_hist(column)
             elif int(visualize) == 3:
-                t = input('Do regression on loc_group or do it or on the ratings of the dataframe: 1_moves for ratings 2 for loc_moves:  1_games for ratings, 2_games for loc moves')
-                #df_analyzeobj.linear_regression(t)
-                df_analyzeobj.game_analysis()
+                t = input('Do regression on loc_group or do it or on the ratings of the dataframe or for 3 do it ratings on games instead of moves: 1_moves for ratings 2 for loc_moves:  1_games for ratings, 2_games for loc moves')
+                df_analyzeobj.linear_regression(t)
             elif int(visualize) == 4:
                 df_analyzeobj.multi_linear_reg()
             else:
