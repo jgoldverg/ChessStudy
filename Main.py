@@ -72,22 +72,28 @@ def main():
             print('1:simply describes the overall dataframe and prints it to console')
             print('2: creates a histogram from the current dataframe')
             print('3: linear regression, will need to enter a single feature, and a single target!')
-            print(
-                '4: multi var regression, must specify multiple features as csv! and the target should also be in csv format')
-            print('5 is to show frequency of a submitted column name case sensitive:')
-            print('6 is to quit the graphing phase and exit the program')
-            visualize = input('1:describe, 2:histogram, 3:linear regression. 4:multi-var linear regression, and 6 is to break out of graph and exit \n')
+            print('4: MultiRegression')
+            print('Anything else is gonna exit this part of the program')
+            visualize = input('1:describe, 2:histogram, 3:linear regression. 5++ is to break out of graph and exit \n')
             if int(visualize) == 1:
-                print(df_analyzeobj.df.describe())
+                print(df_analyzeobj.columns_list)
+                column = input('Enter column to view it ')
+                print(df_analyzeobj[column])
             elif int(visualize) == 2:
                 print(df_analyzeobj.df.head())
                 column = str(input('Enter column to do a histogram on'))
-                df_analyzeobj.make_hist(column)
+                if(column == 'length_of_checkmate'):
+                    df_analyzeobj.make_hist_no_zero(column)
+                else:
+                    df_analyzeobj.make_hist(column)
             elif int(visualize) == 3:
-                t = input('Do regression on loc_group or do it or on the ratings of the dataframe or for 3 do it ratings on games instead of moves: 1_moves for ratings 2 for loc_moves:  1_games for ratings, 2_games for loc moves')
+                t = input('\n 1: Games that Could have been Won \n 2: Length of Checkmate to High Risk Positions '
+                          'Frequency\n 3: Rating Group to Missed Mate Frequency using Game Count \n 4: Rating Group '
+                          'to Missed Mate Frequency \n 5: Length of Checkmate to Lost Positions Frequency \n 6: '
+                          'Rating to Found Checkmates\n')
                 df_analyzeobj.linear_regression(t)
             elif int(visualize) == 4:
-                df_analyzeobj.multi_linear_reg()
+                df_analyzeobj.multiple_regression()
             else:
                 break
 

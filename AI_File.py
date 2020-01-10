@@ -1,14 +1,13 @@
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
-
+lm = LinearRegression()
 import matplotlib
 from collections import Counter
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import random as rnd
-
 
 class CleanAndAnalyze(object):
     columns_list = ["FEN-Position", "#times", "Result", "WhiteR", "BlackR", "E", "EMove", "EMV", "MovePlayed",
@@ -57,6 +56,9 @@ class CleanAndAnalyze(object):
 
     # This method is a function more or less, meant to be called from .apply but using a loop instead same with the few methods below that just create columns the extra bloat aint great
     def rating_group_create(self, white_rating):
+        val = isinstance(white_rating, str)
+        if isinstance(white_rating, str):
+            return
         return round(white_rating / 25) * 25
 
     # takes in move value played engine move value and result
@@ -99,30 +101,69 @@ class CleanAndAnalyze(object):
         else:
             return 20
 
-    # make a hist passing the method to a list
-    def make_hist(self, column):
-        # self.df.plot.hist() #local copy cant run on metallica
-        print(self.df.head())
-        t = str(input('To look at MissedMate:2, lostBigLead:1, useless:0, or just press enter for full df'))
-        if t != '':
-            x = self.df[self.df['NinePtLead'] == int(t)]
-            plt.hist(x[column])
-        else:
-            plt.hist(self.df[column])
+    def rating_to_found_checkmate(self):
+        ratings = np.unique(self.df['Rating_Group'])
+        rating_to_found_mates = dict.fromkeys(np.fromiter(ratings, dtype=np.float64), 0)
+        rating_all_mates = rating_to_found_mates
+        for idx, row in self.df[['Rating_Group', 'EMV', 'NinePtLead', 'MovePlayedValue']].iterrows():
+            if abs(int(row['EMV'])) >= 10000 and abs(int(row['MovePlayedValue'])) >= 10000:
+                rating_to_found_mates[row['Rating_Group']] += 1
+            if row['EMV'] >= 80000:
+                #there is a checkmate not sure if found or not found tho.
+                rating_all_mates[row['Rating_Group']] += 1
+        numerator = np.array(np.fromiter(rating_to_found_mates.values(), dtype=np.float64))
+        denominator = np.array(np.fromiter(rating_all_mates.values(), dtype=np.float64))
+        print(numerator/denominator)
+        return [ratings, numerator/denominator]
 
-        plt.xlabel(input('Enter x axis label:'))
-        plt.ylabel(input('Enter y axis label:'))
+    # make a hist passing the method to a list
+    def make_hist(self, t):
+        print(self.df.head())
+        plt.hist(self.df[t])
+        plt.xlabel(t)
+        plt.ylabel('Count')
+        plt.title(input('Enter title for graph: '))
+        self.save()
+    
+    def make_hist_no_zero(self, t):
+        plt.hist(self.df[t][self.df[t] > 0], color="grey")
+        plt.xlabel(t)
+        plt.ylabel('Count')
         plt.title(input('Enter title for graph: '))
         self.save()
 
-    # This function counts the amount of times NinePtLead happens per game for either player
-
+    # NinePtLead code:
+    # 0 == move in a game such that the move is not a big lead, OR it is a big lead and the player won.
+    # 1 == move in a game where player had a big lead (not forced mate) but did not win the game.
+    # 2 == move in a game where player had a forced checkmate but did not win the game.
+    # 
+    # This z rating that is working of y against z regression
+    # Returns a pair of NumPy arrays [bucket_ratings], [frequency of (1 or 2) relative to all moves].
     def ratings_to_game_counts(self):
-        print('\n')
         rating_keys = np.unique(self.df['Rating_Group']).tolist()
-        rating_game_count_all = dict.fromkeys(rating_keys, 0)
+        rating_move_count_all = {}
+        rating_missed_mate_counter = {}
+        for idx, row in self.df[['Rating_Group', 'Game', 'NinePtLead']].iterrows():  # looping through relevant data
+            current_rating = int(row['Rating_Group'])
+            nine_pt_lead = int(row['NinePtLead'])
+            if not rating_move_count_all.__contains__(current_rating):
+                rating_missed_mate_counter[current_rating] = 0
+                rating_move_count_all[current_rating] = 0
+            elif rating_move_count_all.__contains__(current_rating) and (nine_pt_lead == 1 or nine_pt_lead == 0):
+                #all other moves
+                rating_move_count_all[current_rating] += 1
+            if nine_pt_lead == 2:
+                #missed mate and lost
+                rating_missed_mate_counter[current_rating] += 1
+        missed_mate_numerator = np.array(np.fromiter(rating_missed_mate_counter.values(), dtype=np.float64))
+        all_denominator = np.array(np.fromiter(rating_move_count_all.values(), dtype=np.float64))
+        return [rating_keys, (missed_mate_numerator / all_denominator)]
+
+    def ratings_to_game_counts_old(self):
+        rating_keys = np.unique(self.df['Rating_Group'])
+        rating_game_count_all = dict.fromkeys(np.fromiter(rating_keys, dtype=np.float64), 0)
         previous_game = -1
-        rating_missed_mate_counter = dict.fromkeys(rating_keys, 0)
+        rating_missed_mate_counter = rating_game_count_all
         for idx, row in self.df[['Rating_Group', 'Game', 'NinePtLead']].iterrows():  # looping through relevant data
             game_count = int(row['Game'])
             missed_mate_in_game = False
@@ -133,40 +174,14 @@ class CleanAndAnalyze(object):
                 previous_game = game_count
             if nine_pt_lead == 2 and not missed_mate_in_game:
                 rating_missed_mate_counter[current_rating] += 1
-
-        print(rating_game_count_all)
-        print(rating_missed_mate_counter)
         missed_mate_numerator = np.array(np.fromiter(rating_missed_mate_counter.values(), dtype=np.float64))
         all_denominator = np.array(np.fromiter(rating_game_count_all.values(), dtype=np.float64))
-        return [np.unique(self.df['Rating_Group']).tolist(), missed_mate_numerator / all_denominator]
+        return [np.unique(self.df['Rating_Group']), missed_mate_numerator / all_denominator]
 
-    def ratings_game_count_groupby(self):
-        data = self.df[self.df['NinePtLead'] == 2]
-        print(data.groupby(['Rating_Group', 'Game', 'length_of_checkmate']).count())
-
-    def ratings_game_crosstab(self):
-        data = self.df[self.df['NinePtLead'] == 2]
-        pd.crosstab(data['Rating_Group'], data['loc_group'])
-
-    def test_crosstab(self):
-        print(pd.crosstab(self.df['Rating_Group'], self.df['Game']).apply(lambda r: r / r.sum(), axis=1))
-
-    # NinePtLead code:
-    # 0 == move in a game such that the move is not a big lead, OR it is a big lead and the player won.
-    # 1 == move in a game where player had a big lead (not forced mate) but did not win the game.
-    # 2 == move in a game where player had a forced checkmate but did not win the game.
-    # 
-    # This z rating that is working of y against z regression
-    # Returns a pair of NumPy arrays [bucket_ratings], [frequency of (1 or 2) relative to all moves].
     def rating_frequency_calculate(self):
         ninptlead_rating_group = self.df[['NinePtLead', 'Rating_Group']]
-
         (denominator_keys, denominator_freq) = np.unique(ninptlead_rating_group['Rating_Group'], return_counts=True)
-        # returns pair of arrays; note that second array are absolute counts, not yet frequencies
-
-        numerator_keys, numerator_freq = np.unique(
-            ninptlead_rating_group[ninptlead_rating_group['NinePtLead'] != 0]['Rating_Group'], return_counts=True)
-
+        (numerator_keys, numerator_freq) = np.unique(ninptlead_rating_group[ninptlead_rating_group['NinePtLead'] != 0]['Rating_Group'], return_counts=True)
         denominator_dict = dict(zip(denominator_keys, denominator_freq))
         numerator_dict = dict(zip(numerator_keys, numerator_freq))
         for i in denominator_dict.keys():
@@ -174,41 +189,98 @@ class CleanAndAnalyze(object):
                 numerator_dict[i] = 0
         numerator = np.array(np.fromiter(numerator_dict.values(), dtype=np.float64))
         denominator = np.array(np.fromiter(denominator_dict.values(), dtype=np.float64))
-        print(numerator_dict)
-        print(denominator_dict)
         z = numerator / denominator  # array op
-        print(z)
         return [denominator_keys, z]
+
+    def lengthCheckMatesSeenAndNotSeen(self):
+        checkmates = self.df[self.df['EMV'] > 90000]
+        rows_checkmates = checkmates['Rating_Group', 'loc_group']
+        rating_group = np.unique(self.df['Rating_Group'])
 
     # This is the z rating for x against z
     def length_of_checkmate_frequency(self):
         data = self.df[self.df['NinePtLead'] == 2]
         numerator_x, numerator_freq = np.unique(data['loc_group'], return_counts=True)
         denominator_y, denominator_freq = np.unique(list(self.df['loc_group']), return_counts=True)
-        print(numerator_x, numerator_freq)
-        print(denominator_y, denominator_freq)
         denominator_y = np.delete(denominator_y, [0])  # delete chomps off initial 0 for no-checkmate
         denominator_freq = np.delete(denominator_freq, [0])
         z = numerator_freq / denominator_freq
         return [denominator_y, z]
 
+    def overallLengthOfCheckmate(self):
+        data = self.df[self.df['EMV']> 90000]
+        numerator_x, numerator_freq = np.unique(data['loc_group'], return_counts=True)
+        denominator_y, denominator_freq = np.unique(list(self.df['loc_group']), return_counts=True)
+        denominator_y = np.delete(denominator_y, [0])  # delete chomps off initial 0 for no-checkmate
+        denominator_freq = np.delete(denominator_freq, [0])
+        z = numerator_freq / denominator_freq
+        return [denominator_y, z]
+
+    def overallLengthOfCheckmateAndRatingGroup(self):
+        data = self.df[self.df['EMV']> 90000]
+        numerator_x, numerator_freq = np.unique(data['Rating_Group'], return_counts=True)
+        denominator_y, denominator_freq = np.unique(list(self.df['Rating_Group']), return_counts=True)
+        denominator_y = np.delete(denominator_y, [0])  # delete chomps off initial 0 for no-checkmate
+        denominator_freq = np.delete(denominator_freq, [0])
+        z = numerator_freq / denominator_freq
+        return [denominator_y, z]
+
+    def length_of_checkmate_frequency_nonregpositions(self):
+        data = self.df[self.df['NinePtLead'] != 0]
+        numerator_x, numerator_freq = np.unique(data['loc_group'], return_counts=True)
+        denominator_y, denominator_freq = np.unique(self.df['loc_group'], return_counts=True)
+        return [denominator_y, numerator_freq/denominator_freq]
+
     # this is the first method to use linear regression, this one makes a graph frequency of length of checkmate
     def linear_regression(self, t):
         print(self.df.head())
+        self.df = self.df.dropna()
         z = []
+        x_value_graph = ''
+        y_value_graph = ''
+        titlename = ""
         if int(t) == 1:
             z = self.rating_frequency_calculate()
+            titlename = 'Games that Could have been Won'
+            y_value_graph = 'Missed Mate Frequency'
+            x_value_graph = 'Rating Groups'
         elif int(t) == 2:
             z = self.length_of_checkmate_frequency()
+            titlename = 'Length of Checkmate to High Risk Positions Frequency'
+            y_value_graph = 'Missed Mate Frequency'
+            x_value_graph = 'Length of Checkmate'
         elif int(t) == 3:
-            z = self.ratings_to_game_counts()
+            z = self.ratings_to_game_counts_old()
+            titlename = 'Rating Group to Missed Mate Frequency using Game Count'
+            y_value_graph = 'Game Count'
+            x_value_graph = 'Rating Groups'
         elif int(t) == 4:
-            z = self.test_crosstab()
+            z = self.length_of_checkmate_frequency()
+            titlename = 'Rating Group to Missed Mate Frequency'
+            y_value_graph = 'Length of Checkmate'
+            x_value_graph = 'Rating Groups'
             print(z)
         elif int(t) == 5:
-            print(self.df['Game'].unique())
+            z = self.length_of_checkmate_frequency_nonregpositions()
+            titlename = 'Length of Checkmate to Lost Positions Frequency'
+            y_value_graph = 'Missed Mate Frequency'
+            x_value_graph = 'Length of Checkmate'
+        elif int(t) == 6:
+            z = self.rating_to_found_checkmate()
+            titlename = 'Rating to Found Checkmates'
+            y_value_graph = 'Found Checkmate Frequency'
+            x_value_graph = 'Rating Group'
+        elif int(t) == 7:
+            z = self.overallLengthOfCheckmate()
+            titlename = 'Overall Length of Checkmate '
+            y_value_graph = 'Rating Group'
+            x_value_graph = 'Length of Checkmate'
+        elif int(t) == 8:
+            z = self.overallLengthOfCheckmate()
+            titlename = 'Overall Length of Checkmate To Rating Group'
+            y_value_graph = 'Rating Group'
+            x_value_graph = 'Length of Checkmate'
 
-        lm = LinearRegression()
         x = np.array(z[0]).reshape(-1, 1)
         y = np.array(z[1]).reshape(-1, 1)
         print(x)
@@ -217,20 +289,39 @@ class CleanAndAnalyze(object):
         pred = lm.predict(X=np.array(z[0]).reshape(-1, 1))
         plt.scatter(z[0], pred)
         plt.plot(z[0], pred, color='green', linewidth='3')
-        plt.xlabel(input('xlabel'))
-        plt.ylabel(input('ylabel'))
-        plt.title(input('enter title for graph"'))
-        self.save()
-        print('end of linear regression')
+        plt.xlabel(x_value_graph)
+        plt.ylabel(y_value_graph)
+        plt.title(titlename)
+        plt.savefig(titlename + x_value_graph + y_value_graph+'.png', bbox_inches="tight")
+        plt.close()
 
-    def multi_regression(self):
-        z_rating = self.rating_frequency_calculate()
-        z_rating = self.length_of_checkmate_frequency()
-        no_nine = self.df[self.df['NinePtLead' == 2]]['Rating_Group', 'loc_group', 'NinePtLead']
-        lm = LinearRegression()
-        lm.fit(X=np.unique(np.array(self.df[['Rating_Group', 'loc_group', 'NinePtLead']])),
-               y=np.array(no_nine['NinePtLead']).reshape(-1, 1))
-        lm.predict(np.unique(np.array(self.df[['Rating_Group', 'loc_group', 'NinePtLead']])))
+    def multiple_regression(self):
+        data = self.df[self.df['EMV'] > 90000]
+        data.dropna(inplace=True)
+        X = data[['Rating_Group', 'loc_group', 'NinePtLead']]
+        lm.fit([X['Rating_Group'], X['loc_group']], np.array(X['NinePtLead']).reshape(-1,1))
+        pred = lm.predict(X=X[['Rating_Group','loc_group']])
+        plt.plot(X['Rating_Group'], pred, color='green', linewidth='3')
+        plt.legend()
+        plt.xlabel('Rating Group')
+        plt.ylabel('Length of Checkmate Group')
+        plt.title('Rating Group against Length of Checkmate Group')
+        plt.savefig('Rating Group against LOC.png', bbox_inches="tight")
+        plt.close()
+
+    def multiRegressionRatingLoc(self):
+        self.df = self.df.dropna()
+        rating_loc = self.df[['Rating_Group', 'loc_group', 'NinePtLead']]
+        ratings_keys, rating_counts_all = np.unique(rating_loc['Rating_Group'], return_counts=True)
+        rating_keys_missedMate, rating_count_missedMate = np.unique(rating_loc[rating_loc['NinePtLead'] == 2]['Rating_Group'], return_counts=True)
+        numerator_dict = dict(zip(rating_keys_missedMate, rating_count_missedMate))
+        denominator_dict = dict(zip(ratings_keys, rating_counts_all))
+        for key in denominator_dict.keys():
+            if not numerator_dict.__contains__(key):
+                numerator_dict[key] = 0
+        numerator = np.array(np.fromiter(numerator_dict.values(), dtype=np.float64))
+        denominator = np.array(np.fromiter(denominator_dict.values(), dtype=np.float64))
+        return[numerator/denominator]
 
     # save the current plot call after every time u plot to close and ping for filename
     def save(self):
